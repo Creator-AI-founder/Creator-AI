@@ -1,0 +1,523 @@
+import { useState } from "react";
+import "./App.css";
+
+const API = "http://localhost:3001";
+
+const tools = [
+  {
+    icon: "✦",
+    title: "AI Video Wizard",
+    text: "Turn a simple idea into a complete Short.",
+    color: "purple",
+  },
+  {
+    icon: "▤",
+    title: "Script to Video",
+    text: "Transform your script into an engaging video.",
+    color: "pink",
+  },
+  {
+    icon: "▧",
+    title: "Image to Video",
+    text: "Bring your images to life with motion.",
+    color: "blue",
+  },
+  {
+    icon: "✂",
+    title: "AI Editor",
+    text: "Edit, caption and polish your videos with AI.",
+    color: "green",
+  },
+];
+
+const projects = [
+  ["Cyberpunk City", "01:24", "🌃"],
+  ["Space Exploration", "00:58", "🌌"],
+  ["Epic Adventure", "01:37", "🏔️"],
+  ["Product Promo", "00:45", "👟"],
+];
+
+const templates = [
+  ["YouTube Explainer", "10 Scenes"],
+  ["Product Promo", "8 Scenes"],
+  ["Social Media Ad", "6 Scenes"],
+  ["Cinematic Trailer", "12 Scenes"],
+  ["Business Presentation", "9 Scenes"],
+];
+
+export default function App() {
+  const [page, setPage] = useState("home");
+  const [showCreate, setShowCreate] = useState(false);
+
+  const [idea, setIdea] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [style, setStyle] = useState("Cinematic");
+  const [language, setLanguage] = useState("English");
+
+  const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState("");
+  const [error, setError] = useState("");
+  const [plan, setPlan] = useState(null);
+  const [video, setVideo] = useState(null);
+
+  async function createPlan() {
+    if (!idea.trim()) {
+      setError("Write an idea first.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setStage("AI Director is planning your Short...");
+    setPlan(null);
+    setVideo(null);
+
+    try {
+      const response = await fetch(`${API}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea,
+          duration: Number(duration),
+          style,
+          language,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Generation failed.");
+      }
+
+      setPlan(data);
+      setStage("Plan ready.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function createVideo() {
+    if (!idea.trim()) {
+      setError("Write an idea first.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setVideo(null);
+
+    try {
+      setStage("1/4  AI Director planning...");
+      const response = await fetch(`${API}/api/create-video`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea,
+          duration: Number(duration),
+          style,
+          language,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Video generation failed.");
+      }
+
+      setStage("4/4  Your Short is ready.");
+      setVideo(data);
+      setPlan(data.plan || data.director || null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand" onClick={() => setPage("home")}>
+          <div className="brand-mark">
+            <span />
+            <span />
+            <span />
+          </div>
+          <strong>Creator AI</strong>
+        </div>
+
+        <nav>
+          <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>
+            <span>⌂</span> Home
+          </button>
+          <button onClick={() => setShowCreate(true)}>
+            <span>⊕</span> Create Video
+          </button>
+          <button className={page === "projects" ? "active" : ""} onClick={() => setPage("projects")}>
+            <span>□</span> My Projects
+          </button>
+          <button className={page === "templates" ? "active" : ""} onClick={() => setPage("templates")}>
+            <span>▦</span> Templates
+          </button>
+          <button>
+            <span>✦</span> AI Tools
+          </button>
+          <button>
+            <span>✧</span> Inspiration
+          </button>
+          <button>
+            <span>◉</span> Voice Library
+          </button>
+          <button>
+            <span>▥</span> Analytics
+          </button>
+        </nav>
+
+        <div className="pro-card">
+          <div className="pro-icon">♛</div>
+          <b>Pro Plan</b>
+          <p>Unlimited videos, AI models & premium features.</p>
+          <button>Upgrade Plan →</button>
+        </div>
+
+        <div className="account">
+          <div className="avatar">C</div>
+          <div>
+            <b>Creator</b>
+            <small>Free workspace</small>
+          </div>
+          <span>•••</span>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="topbar">
+          <div className="mobile-brand">
+            <div className="brand-mark small">
+              <span />
+              <span />
+              <span />
+            </div>
+            Creator AI
+          </div>
+
+          <div className="top-actions">
+            <button className="icon-button">⌕</button>
+            <button className="icon-button">♧</button>
+            <div className="top-avatar">C</div>
+          </div>
+        </header>
+
+        {page === "home" && (
+          <Home
+            onCreate={() => setShowCreate(true)}
+            setPage={setPage}
+            setIdea={setIdea}
+            projects={projects}
+            templates={templates}
+          />
+        )}
+
+        {page === "projects" && (
+          <Projects projects={projects} />
+        )}
+
+        {page === "templates" && (
+          <Templates templates={templates} onCreate={() => setShowCreate(true)} />
+        )}
+
+        {plan && (
+          <section className="result-panel">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">AI DIRECTOR</span>
+                <h2>Your video plan</h2>
+              </div>
+              <button onClick={() => setPlan(null)}>×</button>
+            </div>
+
+            <div className="result-grid">
+              <div className="result-card">
+                <span>Title</span>
+                <strong>{plan.title || plan.videoTitle || "Creator AI Short"}</strong>
+              </div>
+
+              <div className="result-card">
+                <span>Hook</span>
+                <strong>{plan.hook || "Your hook will appear here."}</strong>
+              </div>
+            </div>
+
+            {plan.voiceover && (
+              <div className="script-card">
+                <span>VOICEOVER</span>
+                <p>{plan.voiceover}</p>
+              </div>
+            )}
+
+            {video?.videoUrl && (
+              <div className="video-result">
+                <video src={video.videoUrl} controls playsInline />
+                <a href={video.videoUrl} download>
+                  Download Short
+                </a>
+              </div>
+            )}
+          </section>
+        )}
+
+        {loading && (
+          <div className="generation-bar">
+            <div className="loader" />
+            <div>
+              <b>Creating your Short</b>
+              <span>{stage}</span>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="error-box">
+            <b>Something went wrong</b>
+            <span>{error}</span>
+            <button onClick={() => setError("")}>Dismiss</button>
+          </div>
+        )}
+
+        <footer>
+          <span>✦ Creator AI</span>
+          <span>AI-powered creative studio</span>
+          <span>Made for creators 🇧🇩</span>
+        </footer>
+      </main>
+
+      <nav className="mobile-nav">
+        <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>
+          <span>⌂</span>
+          Home
+        </button>
+        <button onClick={() => setShowCreate(true)}>
+          <span className="mobile-create">+</span>
+          Create
+        </button>
+        <button className={page === "projects" ? "active" : ""} onClick={() => setPage("projects")}>
+          <span>□</span>
+          Projects
+        </button>
+        <button>
+          <span>⚙</span>
+          Settings
+        </button>
+      </nav>
+
+      {showCreate && (
+        <div className="modal-backdrop" onClick={() => setShowCreate(false)}>
+          <div className="create-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="eyebrow">AI VIDEO WIZARD</span>
+                <h2>Create a Short</h2>
+              </div>
+              <button onClick={() => setShowCreate(false)}>×</button>
+            </div>
+
+            <label>What do you want to create?</label>
+
+            <textarea
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              placeholder="Describe your video idea..."
+              autoFocus
+            />
+
+            <div className="settings-grid">
+              <label>
+                Duration
+                <select value={duration} onChange={(e) => setDuration(e.target.value)}>
+                  <option value="15">15 sec</option>
+                  <option value="30">30 sec</option>
+                  <option value="45">45 sec</option>
+                  <option value="60">60 sec</option>
+                </select>
+              </label>
+
+              <label>
+                Style
+                <select value={style} onChange={(e) => setStyle(e.target.value)}>
+                  <option>Cinematic</option>
+                  <option>Documentary</option>
+                  <option>Fast paced</option>
+                  <option>Minimal</option>
+                  <option>Storytelling</option>
+                </select>
+              </label>
+
+              <label>
+                Language
+                <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                  <option>English</option>
+                  <option>Hindi</option>
+                  <option>Bangla</option>
+                  <option>Banglish</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="modal-actions">
+              <button className="secondary" onClick={createPlan}>
+                Generate Plan
+              </button>
+
+              <button
+                className="primary"
+                onClick={() => {
+                  setShowCreate(false);
+                  createVideo();
+                }}
+              >
+                ✦ Create Short
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Home({ onCreate, setPage, setIdea, projects, templates }) {
+  return (
+    <div className="page">
+      <section className="welcome">
+        <div>
+          <span className="eyebrow">CREATOR AI STUDIO</span>
+          <h1>
+            What will you <em>create</em> today?
+          </h1>
+          <p>Turn your ideas into stunning videos with AI.</p>
+        </div>
+
+        <button className="new-video" onClick={onCreate}>
+          + New Video
+        </button>
+      </section>
+
+      <section className="tool-grid">
+        {tools.map((tool) => (
+          <button
+            className="tool-card"
+            key={tool.title}
+            onClick={onCreate}
+          >
+            <div className={`tool-icon ${tool.color}`}>{tool.icon}</div>
+            <div className="tool-content">
+              <h3>{tool.title}</h3>
+              <p>{tool.text}</p>
+            </div>
+            <span className="arrow">→</span>
+          </button>
+        ))}
+      </section>
+
+      <SectionTitle title="Recent Projects" action="View all" onClick={() => setPage("projects")} />
+
+      <section className="project-grid">
+        {projects.map(([name, time, emoji]) => (
+          <div className="project-card" key={name}>
+            <div className="project-image">
+              <span>{emoji}</span>
+              <b>{time}</b>
+            </div>
+            <div className="project-info">
+              <strong>{name}</strong>
+              <small>Updated recently</small>
+              <span>•••</span>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <SectionTitle title="Templates" action="View all" onClick={() => setPage("templates")} />
+
+      <section className="template-row">
+        {templates.map(([name, scenes], i) => (
+          <button
+            className={`template-card template-${i}`}
+            key={name}
+            onClick={onCreate}
+          >
+            <div className="template-art" />
+            <strong>{name}</strong>
+            <small>{scenes}</small>
+          </button>
+        ))}
+      </section>
+
+      <section className="feature-strip">
+        <div><b>✦</b><span><strong>AI Powered</strong><small>Advanced AI tools</small></span></div>
+        <div><b>ϟ</b><span><strong>Lightning Fast</strong><small>Generate in minutes</small></span></div>
+        <div><b>◇</b><span><strong>High Quality</strong><small>Vertical video ready</small></span></div>
+        <div><b>☺</b><span><strong>Easy to Use</strong><small>No editing skills needed</small></span></div>
+      </section>
+    </div>
+  );
+}
+
+function SectionTitle({ title, action, onClick }) {
+  return (
+    <div className="section-title">
+      <h2>{title}</h2>
+      <button onClick={onClick}>{action}</button>
+    </div>
+  );
+}
+
+function Projects({ projects }) {
+  return (
+    <div className="page simple-page">
+      <span className="eyebrow">WORKSPACE</span>
+      <h1>My Projects</h1>
+      <p className="page-subtitle">Your Creator AI projects in one place.</p>
+
+      <div className="large-project-grid">
+        {[...projects, ...projects].map(([name, time, emoji], i) => (
+          <div className="project-card" key={`${name}-${i}`}>
+            <div className="project-image">
+              <span>{emoji}</span>
+              <b>{time}</b>
+            </div>
+            <div className="project-info">
+              <strong>{name}</strong>
+              <small>Creator AI project</small>
+              <span>•••</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Templates({ templates, onCreate }) {
+  return (
+    <div className="page simple-page">
+      <span className="eyebrow">START FASTER</span>
+      <h1>Templates</h1>
+      <p className="page-subtitle">Start with a proven video structure.</p>
+
+      <div className="large-template-grid">
+        {templates.map(([name, scenes], i) => (
+          <button className={`template-card template-${i}`} key={name} onClick={onCreate}>
+            <div className="template-art" />
+            <strong>{name}</strong>
+            <small>{scenes}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

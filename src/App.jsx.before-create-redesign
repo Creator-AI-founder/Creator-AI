@@ -1,0 +1,512 @@
+import { useState } from "react";
+import "./App.css";
+
+const API = "http://localhost:3001";
+
+const projects = [
+  { title: "Space mystery", type: "Short", time: "Today" },
+  { title: "The silent stadium", type: "Short", time: "Yesterday" },
+  { title: "Why Venus is strange", type: "Short", time: "Oct 20" },
+];
+
+function App() {
+  const [page, setPage] = useState("create");
+  const [idea, setIdea] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [style, setStyle] = useState("Cinematic");
+  const [language, setLanguage] = useState("English");
+  const [loading, setLoading] = useState(false);
+  const [director, setDirector] = useState(null);
+  const [video, setVideo] = useState(null);
+  const [error, setError] = useState("");
+
+  async function generatePlan() {
+    if (!idea.trim()) {
+      setError("Write an idea first.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    setDirector(null);
+    setVideo(null);
+
+    try {
+      const res = await fetch(`${API}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea,
+          duration: Number(duration),
+          style,
+          language,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Generation failed.");
+      }
+
+      setDirector(data);
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function createVideo() {
+    if (!idea.trim()) {
+      setError("Write an idea first.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    setVideo(null);
+
+    try {
+      const res = await fetch(`${API}/api/create-video`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea,
+          duration: Number(duration),
+          style,
+          language,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Video generation failed.");
+      }
+
+      setVideo(data);
+      setPage("create");
+    } catch (err) {
+      setError(err.message || "Video creation failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand" onClick={() => setPage("create")}>
+          <div className="brand-mark">✦</div>
+          <div>
+            <strong>Creator AI</strong>
+            <span>AI video studio</span>
+          </div>
+        </div>
+
+        <div className="nav-label">WORKSPACE</div>
+
+        <button
+          className={`nav-item ${page === "create" ? "active" : ""}`}
+          onClick={() => setPage("create")}
+        >
+          <span>✦</span>
+          Create
+        </button>
+
+        <button
+          className={`nav-item ${page === "projects" ? "active" : ""}`}
+          onClick={() => setPage("projects")}
+        >
+          <span>▣</span>
+          Projects
+        </button>
+
+        <div className="sidebar-bottom">
+          <button
+            className={`nav-item ${page === "settings" ? "active" : ""}`}
+            onClick={() => setPage("settings")}
+          >
+            <span>⚙</span>
+            Settings
+          </button>
+
+          <div className="plan-card">
+            <div className="plan-icon">✦</div>
+            <div>
+              <strong>Creator Free</strong>
+              <span>V2 preview</span>
+            </div>
+          </div>
+
+          <div className="user-card">
+            <div className="avatar">L</div>
+            <div>
+              <strong>Creator</strong>
+              <span>Local workspace</span>
+            </div>
+            <span className="dots">•••</span>
+          </div>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        <header className="topbar">
+          <div className="mobile-brand">
+            <div className="brand-mark">✦</div>
+            <strong>Creator AI</strong>
+          </div>
+
+          <div className="topbar-right">
+            <span className="status-dot"></span>
+            <span className="status-text">Local engine ready</span>
+            <button className="icon-button">?</button>
+          </div>
+        </header>
+
+        {page === "create" && (
+          <section className="page">
+            <div className="hero">
+              <div className="eyebrow">
+                <span>✦</span>
+                CREATOR AI V2
+              </div>
+
+              <h1>
+                Turn an idea into a
+                <span> Short.</span>
+              </h1>
+
+              <p>
+                Your AI director plans the story, visuals, voice and editing
+                for you.
+              </p>
+            </div>
+
+            <div className="creator-layout">
+              <section className="create-card">
+                <div className="card-top">
+                  <div>
+                    <span className="card-eyebrow">NEW PROJECT</span>
+                    <h2>Create a Short</h2>
+                  </div>
+                  <span className="draft-badge">Draft</span>
+                </div>
+
+                <label>Your idea</label>
+
+                <div className="idea-box">
+                  <textarea
+                    value={idea}
+                    onChange={(e) => setIdea(e.target.value)}
+                    placeholder="Describe the Short you want to create..."
+                  />
+                  <div className="idea-footer">
+                    <span>{idea.length}/1000</span>
+                    <button
+                      className="spark-button"
+                      onClick={() =>
+                        setIdea(
+                          "What if the world's most famous football stadium suddenly went completely silent during a World Cup final?"
+                        )
+                      }
+                    >
+                      ✦ Inspire me
+                    </button>
+                  </div>
+                </div>
+
+                <div className="controls">
+                  <div className="control">
+                    <label>Duration</label>
+                    <select
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                    >
+                      <option value="15">15 sec</option>
+                      <option value="30">30 sec</option>
+                      <option value="45">45 sec</option>
+                      <option value="60">60 sec</option>
+                    </select>
+                  </div>
+
+                  <div className="control">
+                    <label>Style</label>
+                    <select
+                      value={style}
+                      onChange={(e) => setStyle(e.target.value)}
+                    >
+                      <option>Cinematic</option>
+                      <option>Documentary</option>
+                      <option>Energetic</option>
+                      <option>Dark</option>
+                      <option>Calm</option>
+                      <option>Storytelling</option>
+                    </select>
+                  </div>
+
+                  <div className="control">
+                    <label>Language</label>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                    >
+                      <option>English</option>
+                      <option>Hindi</option>
+                      <option>Bangla</option>
+                      <option>Banglish</option>
+                    </select>
+                  </div>
+                </div>
+
+                {error && <div className="error-box">{error}</div>}
+
+                <div className="action-row">
+                  <button
+                    className="secondary-button"
+                    onClick={generatePlan}
+                    disabled={loading}
+                  >
+                    <span>✦</span>
+                    {loading ? "Thinking..." : "Generate plan"}
+                  </button>
+
+                  <button
+                    className="primary-button"
+                    onClick={createVideo}
+                    disabled={loading}
+                  >
+                    <span>▶</span>
+                    {loading ? "Creating..." : "Create Short"}
+                  </button>
+                </div>
+              </section>
+
+              <aside className="side-panel">
+                <div className="panel-title">
+                  <span>AI DIRECTOR</span>
+                  <div className="live-pill">
+                    <i></i>
+                    Ready
+                  </div>
+                </div>
+
+                <div className="director-preview">
+                  <div className="director-orb">✦</div>
+                  <h3>Your creative director</h3>
+                  <p>
+                    Plans hooks, scenes, visuals, pacing, voice and editing
+                    before rendering.
+                  </p>
+                </div>
+
+                <div className="director-list">
+                  <div>
+                    <span>01</span>
+                    <strong>Strong hook</strong>
+                  </div>
+                  <div>
+                    <span>02</span>
+                    <strong>Dynamic visuals</strong>
+                  </div>
+                  <div>
+                    <span>03</span>
+                    <strong>Natural voice</strong>
+                  </div>
+                  <div>
+                    <span>04</span>
+                    <strong>Smart editing</strong>
+                  </div>
+                </div>
+              </aside>
+            </div>
+
+            {(director || video) && (
+              <section className="results-section">
+                <div className="section-heading">
+                  <div>
+                    <span>PROJECT OUTPUT</span>
+                    <h2>Production workspace</h2>
+                  </div>
+                </div>
+
+                {video?.videoUrl && (
+                  <div className="video-result">
+                    <div className="video-frame">
+                      <video controls src={`${API}${video.videoUrl}`} />
+                    </div>
+
+                    <div className="video-info">
+                      <span className="success-label">✓ VIDEO READY</span>
+                      <h3>Your Short is ready.</h3>
+                      <p>
+                        The current engine rendered your project as a vertical
+                        9:16 video.
+                      </p>
+                      <a
+                        className="download-button"
+                        href={`${API}${video.videoUrl}`}
+                        download
+                      >
+                        Download video
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {director && (
+                  <div className="director-result">
+                    <div className="result-card wide">
+                      <span>TITLE</span>
+                      <h3>{director.title || "Untitled Short"}</h3>
+                    </div>
+
+                    <div className="result-grid">
+                      <div className="result-card">
+                        <span>HOOK</span>
+                        <p>{director.hook || "—"}</p>
+                      </div>
+
+                      <div className="result-card">
+                        <span>MUSIC</span>
+                        <p>{director.music || "—"}</p>
+                      </div>
+                    </div>
+
+                    {director.voiceover && (
+                      <div className="result-card">
+                        <span>VOICEOVER</span>
+                        <p>{director.voiceover}</p>
+                      </div>
+                    )}
+
+                    {director.scenes && (
+                      <div className="result-card">
+                        <span>VISUAL PLAN</span>
+
+                        <div className="scene-list">
+                          {director.scenes.map((scene, index) => (
+                            <div className="scene" key={index}>
+                              <b>{String(index + 1).padStart(2, "0")}</b>
+                              <p>
+                                {typeof scene === "string"
+                                  ? scene
+                                  : scene.description ||
+                                    scene.visual ||
+                                    JSON.stringify(scene)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+          </section>
+        )}
+
+        {page === "projects" && (
+          <section className="page simple-page">
+            <div className="page-heading">
+              <span>WORKSPACE</span>
+              <h1>Projects</h1>
+              <p>Your recent Creator AI projects.</p>
+            </div>
+
+            <div className="project-grid">
+              {projects.map((project) => (
+                <div className="project-card" key={project.title}>
+                  <div className="project-thumb">
+                    <span>✦</span>
+                  </div>
+                  <div className="project-meta">
+                    <h3>{project.title}</h3>
+                    <span>
+                      {project.type} · {project.time}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {page === "settings" && (
+          <section className="page simple-page">
+            <div className="page-heading">
+              <span>WORKSPACE</span>
+              <h1>Settings</h1>
+              <p>Configure your Creator AI workspace.</p>
+            </div>
+
+            <div className="settings-card">
+              <div className="setting-row">
+                <div>
+                  <strong>Default language</strong>
+                  <span>Used when creating new Shorts.</span>
+                </div>
+                <select>
+                  <option>English</option>
+                  <option>Hindi</option>
+                  <option>Bangla</option>
+                  <option>Banglish</option>
+                </select>
+              </div>
+
+              <div className="setting-row">
+                <div>
+                  <strong>Default style</strong>
+                  <span>Your preferred creative direction.</span>
+                </div>
+                <select>
+                  <option>Cinematic</option>
+                  <option>Documentary</option>
+                  <option>Energetic</option>
+                </select>
+              </div>
+
+              <div className="setting-row">
+                <div>
+                  <strong>Voice</strong>
+                  <span>Voice Studio will be expanded in Phase 3.</span>
+                </div>
+                <button className="disabled-control">Auto</button>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <nav className="mobile-nav">
+        <button
+          className={page === "create" ? "active" : ""}
+          onClick={() => setPage("create")}
+        >
+          <span>✦</span>
+          Create
+        </button>
+
+        <button
+          className={page === "projects" ? "active" : ""}
+          onClick={() => setPage("projects")}
+        >
+          <span>▣</span>
+          Projects
+        </button>
+
+        <button
+          className={page === "settings" ? "active" : ""}
+          onClick={() => setPage("settings")}
+        >
+          <span>⚙</span>
+          Settings
+        </button>
+      </nav>
+    </div>
+  );
+}
+
+export default App;

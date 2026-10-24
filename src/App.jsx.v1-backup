@@ -1,0 +1,803 @@
+import { useState } from "react";
+import "./App.css";
+
+const API = "http://localhost:3001";
+
+function App() {
+  const [idea, setIdea] = useState("");
+  const [duration, setDuration] = useState("30 sec");
+  const [style, setStyle] = useState("Cinematic");
+  const [language, setLanguage] = useState("English");
+
+  const [loading, setLoading] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+
+  const [result, setResult] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
+
+  const createPlan = async () => {
+    if (!idea.trim()) {
+      alert("Write your video idea first!");
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+    setVideoUrl(null);
+
+    try {
+      const response = await fetch(`${API}/api/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          idea,
+          duration,
+          style,
+          language
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "AI generation failed."
+        );
+      }
+
+      setResult(data);
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createVideo = async () => {
+    if (!idea.trim()) {
+      alert("Write your video idea first!");
+      return;
+    }
+
+    setVideoLoading(true);
+    setVideoUrl(null);
+
+    try {
+      const response = await fetch(
+        `${API}/api/create-video`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            idea,
+            duration,
+            style,
+            language
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Video generation failed."
+        );
+      }
+
+      setResult(data);
+
+      if (data.videoUrl) {
+        setVideoUrl(API + data.videoUrl);
+      }
+    } catch (error) {
+      alert("Video error: " + error.message);
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied!");
+    } catch {
+      alert("Couldn't copy.");
+    }
+  };
+
+  const scenes = Array.isArray(result?.scenes)
+    ? result.scenes
+    : [];
+
+  return (
+    <div className="app">
+
+      {/* NAVBAR */}
+
+      <nav className="navbar">
+
+        <div className="logo">
+          <span>✦</span>
+          Creator AI
+        </div>
+
+        <button className="proButton">
+          PRO
+        </button>
+
+      </nav>
+
+
+      <main className="container">
+
+        {/* HERO */}
+
+        <section className="hero">
+
+          <div className="badge">
+            ✦ AI CREATOR STUDIO
+          </div>
+
+          <h1>
+            Turn ideas into
+            <span> Shorts.</span>
+          </h1>
+
+          <p>
+            Your AI director plans the story,
+            writes the narration, finds visuals
+            and builds the video.
+          </p>
+
+        </section>
+
+
+        {/* NEW PROJECT */}
+
+        <section className="creatorCard">
+
+          <div className="cardTop">
+
+            <div>
+
+              <div className="smallLabel">
+                NEW PROJECT
+              </div>
+
+              <h2>
+                What are you creating?
+              </h2>
+
+            </div>
+
+            <div className="status">
+              ● AI READY
+            </div>
+
+          </div>
+
+
+          <textarea
+            value={idea}
+            onChange={(e) =>
+              setIdea(e.target.value)
+            }
+            placeholder={`Describe your Short...
+
+Example:
+Three friends investigate an abandoned
+house that appears only at midnight.`}
+          />
+
+
+          {/* SETTINGS */}
+
+          <div className="options">
+
+            <div className="option">
+
+              <label>
+                Duration
+              </label>
+
+              <select
+                value={duration}
+                onChange={(e) =>
+                  setDuration(e.target.value)
+                }
+              >
+                <option>15 sec</option>
+                <option>30 sec</option>
+                <option>45 sec</option>
+                <option>60 sec</option>
+              </select>
+
+            </div>
+
+
+            <div className="option">
+
+              <label>
+                Style
+              </label>
+
+              <select
+                value={style}
+                onChange={(e) =>
+                  setStyle(e.target.value)
+                }
+              >
+                <option>Cinematic</option>
+                <option>Horror</option>
+                <option>Funny</option>
+                <option>Documentary</option>
+                <option>Emotional</option>
+                <option>Fast paced</option>
+              </select>
+
+            </div>
+
+
+            <div className="option">
+
+              <label>
+                Language
+              </label>
+
+              <select
+                value={language}
+                onChange={(e) =>
+                  setLanguage(e.target.value)
+                }
+              >
+                <option>English</option>
+                <option>Hindi</option>
+                <option>Bangla</option>
+                <option>Banglish</option>
+              </select>
+
+            </div>
+
+          </div>
+
+
+          {/* ACTIONS */}
+
+          <div className="buttonRow">
+
+            <button
+              className="createButton"
+              onClick={createPlan}
+              disabled={
+                loading ||
+                videoLoading
+              }
+            >
+              {loading
+                ? "✦ Directing..."
+                : "✦ Generate Plan"}
+            </button>
+
+
+            <button
+              className="videoButton"
+              onClick={createVideo}
+              disabled={
+                loading ||
+                videoLoading
+              }
+            >
+              {videoLoading
+                ? "🎬 Rendering..."
+                : "🎬 Create Short"}
+            </button>
+
+          </div>
+
+
+          <div className="freeText">
+            Free prototype · Built for creators
+          </div>
+
+        </section>
+
+
+        {/* PLAN LOADING */}
+
+        {loading && (
+          <section className="loadingCard">
+
+            <div className="loader"></div>
+
+            <div>
+
+              <strong>
+                AI Director is working
+              </strong>
+
+              <p>
+                Building your story,
+                scenes and narration...
+              </p>
+
+            </div>
+
+          </section>
+        )}
+
+
+        {/* VIDEO LOADING */}
+
+        {videoLoading && (
+          <section className="loadingCard">
+
+            <div className="loader"></div>
+
+            <div>
+
+              <strong>
+                Creating your Short
+              </strong>
+
+              <p>
+                Generating narration,
+                visuals and rendering the MP4...
+              </p>
+
+            </div>
+
+          </section>
+        )}
+
+
+        {/* VIDEO WORKSPACE */}
+
+        {videoUrl && (
+          <section className="workspace">
+
+            <div className="workspaceHeader">
+
+              <div>
+
+                <div className="smallLabel">
+                  VIDEO READY
+                </div>
+
+                <h2>
+                  Your Short
+                </h2>
+
+              </div>
+
+            </div>
+
+
+            <div className="projectInfo">
+
+              <span>
+                ⏱ {duration}
+              </span>
+
+              <span>
+                ✦ {style}
+              </span>
+
+              <span>
+                🌐 {language}
+              </span>
+
+            </div>
+
+
+            <div className="videoCard">
+
+              <video
+                src={videoUrl}
+                controls
+                playsInline
+              />
+
+              <a
+                className="downloadButton"
+                href={videoUrl}
+                download="creator-ai-short.mp4"
+              >
+                ⬇ Download MP4
+              </a>
+
+            </div>
+
+          </section>
+        )}
+
+
+        {/* AI DIRECTOR */}
+
+        {result && (
+          <section className="workspace">
+
+            <div className="workspaceHeader">
+
+              <div>
+
+                <div className="smallLabel">
+                  AI DIRECTOR
+                </div>
+
+                <h2>
+                  Your Production Plan
+                </h2>
+
+              </div>
+
+            </div>
+
+
+            <div className="projectInfo">
+
+              <span>
+                ⏱ {duration}
+              </span>
+
+              <span>
+                ✦ {style}
+              </span>
+
+              <span>
+                🌐 {language}
+              </span>
+
+            </div>
+
+
+            {/* TITLE */}
+
+            {result.title && (
+              <div className="resultCard titleCard">
+
+                <div className="resultTop">
+
+                  <span className="resultEmoji">
+                    🏷️
+                  </span>
+
+                  <div>
+
+                    <div className="resultLabel">
+                      TITLE
+                    </div>
+
+                    <h3>
+                      {result.title}
+                    </h3>
+
+                  </div>
+
+                </div>
+
+
+                <button
+                  className="miniCopy"
+                  onClick={() =>
+                    copyText(result.title)
+                  }
+                >
+                  Copy title
+                </button>
+
+              </div>
+            )}
+
+
+            {/* HOOK */}
+
+            {result.hook && (
+              <div className="resultCard">
+
+                <div className="resultTop">
+
+                  <span className="resultEmoji">
+                    ⚡
+                  </span>
+
+                  <div>
+
+                    <div className="resultLabel">
+                      HOOK
+                    </div>
+
+                    <h3>
+                      {result.hook}
+                    </h3>
+
+                  </div>
+
+                </div>
+
+
+                <button
+                  className="miniCopy"
+                  onClick={() =>
+                    copyText(result.hook)
+                  }
+                >
+                  Copy hook
+                </button>
+
+              </div>
+            )}
+
+
+            {/* VOICEOVER */}
+
+            {result.voiceover && (
+              <div className="resultCard">
+
+                <div className="resultTop">
+
+                  <span className="resultEmoji">
+                    🎙️
+                  </span>
+
+                  <div>
+
+                    <div className="resultLabel">
+                      VOICEOVER
+                    </div>
+
+                    <h3>
+                      {result.voiceover}
+                    </h3>
+
+                  </div>
+
+                </div>
+
+
+                <button
+                  className="miniCopy"
+                  onClick={() =>
+                    copyText(result.voiceover)
+                  }
+                >
+                  Copy voiceover
+                </button>
+
+              </div>
+            )}
+
+
+            {/* SCENES */}
+
+            {scenes.length > 0 && (
+              <div className="resultCard">
+
+                <div className="resultTop">
+
+                  <span className="resultEmoji">
+                    🎬
+                  </span>
+
+                  <div>
+
+                    <div className="resultLabel">
+                      SCENES
+                    </div>
+
+                    <h3>
+                      {scenes.length} scenes
+                      planned
+                    </h3>
+
+                  </div>
+
+                </div>
+
+
+                {scenes.map(
+                  (scene, index) => (
+                    <div
+                      key={
+                        scene.scene ||
+                        index
+                      }
+                      style={{
+                        marginTop:
+                          "14px",
+                        paddingTop:
+                          "14px",
+                        borderTop:
+                          "1px solid rgba(255,255,255,0.055)"
+                      }}
+                    >
+
+                      <div
+                        style={{
+                          color:
+                            "#9276ff",
+                          fontSize:
+                            "10px",
+                          fontWeight:
+                            900,
+                          letterSpacing:
+                            "0.8px"
+                        }}
+                      >
+                        SCENE{" "}
+                        {scene.scene ||
+                          index + 1}
+                      </div>
+
+
+                      {scene.visual && (
+                        <p
+                          style={{
+                            margin:
+                              "7px 0 0",
+                            color:
+                              "#aaaab4",
+                            fontSize:
+                              "12px",
+                            lineHeight:
+                              1.55
+                          }}
+                        >
+                          🖼️{" "}
+                          {scene.visual}
+                        </p>
+                      )}
+
+
+                      {scene.voiceover && (
+                        <p
+                          style={{
+                            margin:
+                              "6px 0 0",
+                            color:
+                              "#d4d4d8",
+                            fontSize:
+                              "12px",
+                            lineHeight:
+                              1.6
+                          }}
+                        >
+                          🎙️{" "}
+                          {scene.voiceover}
+                        </p>
+                      )}
+
+
+                      {scene.caption && (
+                        <p
+                          style={{
+                            margin:
+                              "6px 0 0",
+                            color:
+                              "#777782",
+                            fontSize:
+                              "11px"
+                          }}
+                        >
+                          💬{" "}
+                          {scene.caption}
+                        </p>
+                      )}
+
+                    </div>
+                  )
+                )}
+
+              </div>
+            )}
+
+
+            {/* MUSIC */}
+
+            {result.music && (
+              <div className="resultCard">
+
+                <div className="resultTop">
+
+                  <span className="resultEmoji">
+                    🎵
+                  </span>
+
+                  <div>
+
+                    <div className="resultLabel">
+                      MUSIC & SFX
+                    </div>
+
+                    <h3>
+                      {result.music}
+                    </h3>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+          </section>
+        )}
+
+
+        {/* FEATURE STRIP */}
+
+        <section className="features">
+
+          <div>
+
+            <span>🧠</span>
+
+            <h3>
+              AI Director
+            </h3>
+
+            <p>
+              Turns a simple idea into
+              a structured Short.
+            </p>
+
+          </div>
+
+
+          <div>
+
+            <span>🎙️</span>
+
+            <h3>
+              Natural Voice
+            </h3>
+
+            <p>
+              AI narration powered by
+              your local voice engine.
+            </p>
+
+          </div>
+
+
+          <div>
+
+            <span>🎬</span>
+
+            <h3>
+              Automatic Video
+            </h3>
+
+            <p>
+              Scenes, narration and
+              vertical rendering in one flow.
+            </p>
+
+          </div>
+
+        </section>
+
+
+        {/* FOOTER */}
+
+        <footer className="footer">
+
+          Made with ✦ by{" "}
+          <strong>
+            Leen
+          </strong>{" "}
+          · Bangladesh 🇧🇩
+
+        </footer>
+
+      </main>
+
+    </div>
+  );
+}
+
+export default App;

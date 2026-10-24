@@ -1,0 +1,569 @@
+import { useState } from "react";
+import "./App.css";
+
+const API = "http://localhost:3001";
+
+const voices = [
+  { id: "auto", name: "Auto", desc: "Best for your story" },
+  { id: "af_heart", name: "Heart", desc: "Warm & cinematic" },
+  { id: "af_bella", name: "Bella", desc: "Clear & expressive" },
+  { id: "am_adam", name: "Adam", desc: "Deep & confident" },
+  { id: "am_michael", name: "Michael", desc: "Natural narrator" },
+];
+
+const projects = [
+  { title: "Space mystery", meta: "30 sec · Today" },
+  { title: "The silent stadium", meta: "30 sec · Yesterday" },
+  { title: "Why Venus is strange", meta: "45 sec · Oct 20" },
+];
+
+export default function App() {
+  const [page, setPage] = useState("create");
+  const [idea, setIdea] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [style, setStyle] = useState("Cinematic");
+  const [language, setLanguage] = useState("English");
+  const [voice, setVoice] = useState("auto");
+
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("");
+  const [director, setDirector] = useState(null);
+  const [video, setVideo] = useState(null);
+  const [error, setError] = useState("");
+
+  async function generatePlan() {
+    if (!idea.trim()) return;
+
+    setError("");
+    setDirector(null);
+    setLoading(true);
+    setLoadingText("Thinking about your story...");
+
+    try {
+      const res = await fetch(`${API}/api/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idea,
+          duration: `${duration} sec`,
+          style,
+          language,
+          voice,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Could not generate the plan.");
+      }
+
+      setDirector(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  }
+
+  async function createVideo() {
+    if (!idea.trim()) return;
+
+    setError("");
+    setVideo(null);
+    setLoading(true);
+    setLoadingText("Creating your Short...");
+
+    try {
+      const res = await fetch(`${API}/api/create-video`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idea,
+          duration: Number(duration),
+          style,
+          language,
+          voice,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Video generation failed.");
+      }
+
+      const output = data.video || data.output || data.url;
+
+      if (output) {
+        setVideo(
+          output.startsWith("http")
+            ? output
+            : `${API}${output.startsWith("/") ? "" : "/"}${output}`
+        );
+      }
+
+      if (data.director) {
+        setDirector(data.director);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  }
+
+  function newProject() {
+    setIdea("");
+    setDirector(null);
+    setVideo(null);
+    setError("");
+    setPage("create");
+  }
+
+  return (
+    <div className="creator-app">
+      <header className="top-nav">
+        <button className="brand" onClick={newProject}>
+          <span className="logo">
+            <span className="logo-core">C</span>
+            <span className="logo-orbit one" />
+            <span className="logo-orbit two" />
+          </span>
+          <span className="brand-name">
+            Creator<span>AI</span>
+          </span>
+        </button>
+
+        <nav>
+          <button
+            className={page === "create" ? "nav-link active" : "nav-link"}
+            onClick={() => setPage("create")}
+          >
+            Create
+          </button>
+
+          <button
+            className={page === "projects" ? "nav-link active" : "nav-link"}
+            onClick={() => setPage("projects")}
+          >
+            Projects
+          </button>
+
+          <button
+            className={page === "settings" ? "nav-link active" : "nav-link"}
+            onClick={() => setPage("settings")}
+          >
+            Settings
+          </button>
+        </nav>
+
+        <div className="engine-status">
+          <span />
+          Local engine
+        </div>
+      </header>
+
+      {page === "create" && (
+        <main className="create-page">
+          <section className="hero">
+            <div className="hero-pill">
+              <span>✦</span>
+              AI CREATIVE STUDIO
+            </div>
+
+            <h1>
+              Turn an idea into
+              <br />
+              <em>a Short.</em>
+            </h1>
+
+            <p>
+              Tell Creator AI what you want to make. Your story, voice,
+              visuals and edit are built around the idea.
+            </p>
+          </section>
+
+          <section className="composer">
+            <div className="composer-head">
+              <div>
+                <span className="small-label">YOUR IDEA</span>
+                <span className="draft">Draft</span>
+              </div>
+
+              <span className="counter">
+                {idea.length}/1000
+              </span>
+            </div>
+
+            <textarea
+              value={idea}
+              onChange={(e) => setIdea(e.target.value.slice(0, 1000))}
+              placeholder="Describe the Short you want to create..."
+            />
+
+            {!idea && (
+              <div className="idea-examples">
+                <span>Try an idea</span>
+
+                <button
+                  onClick={() =>
+                    setIdea(
+                      "What if the world's most famous football stadium suddenly went completely silent during a World Cup final?"
+                    )
+                  }
+                >
+                  A mysterious football story
+                </button>
+
+                <button
+                  onClick={() =>
+                    setIdea(
+                      "The strangest thing about Venus that almost nobody knows."
+                    )
+                  }
+                >
+                  A beautiful science fact
+                </button>
+              </div>
+            )}
+
+            <div className="composer-bottom">
+              <div className="quick-options">
+                <div className="quick-group">
+                  <span>Length</span>
+                  <div className="segmented">
+                    {["15", "30", "45", "60"].map((item) => (
+                      <button
+                        key={item}
+                        className={duration === item ? "selected" : ""}
+                        onClick={() => setDuration(item)}
+                      >
+                        {item}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="quick-group">
+                  <span>Style</span>
+                  <select
+                    value={style}
+                    onChange={(e) => setStyle(e.target.value)}
+                  >
+                    <option>Cinematic</option>
+                    <option>Documentary</option>
+                    <option>Story</option>
+                    <option>Facts</option>
+                    <option>Horror</option>
+                  </select>
+                </div>
+
+                <div className="quick-group">
+                  <span>Language</span>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                  >
+                    <option>English</option>
+                    <option>Hindi</option>
+                    <option>Bangla</option>
+                    <option>Banglish</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                className="generate-button"
+                disabled={!idea.trim() || loading}
+                onClick={createVideo}
+              >
+                <span>{loading ? "Creating..." : "Create Short"}</span>
+                {!loading && <b>↗</b>}
+              </button>
+            </div>
+          </section>
+
+          <section className="studio-tools">
+            <div className="tool-card">
+              <div className="tool-icon purple">✦</div>
+              <div>
+                <strong>AI Director</strong>
+                <span>Hook, script & visual plan</span>
+              </div>
+              <button onClick={generatePlan}>Open</button>
+            </div>
+
+            <div className="tool-card">
+              <div className="tool-icon blue">◉</div>
+              <div>
+                <strong>Voice</strong>
+                <span>
+                  {voices.find((v) => v.id === voice)?.name || "Auto"}
+                </span>
+              </div>
+              <select
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+              >
+                {voices.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="tool-card">
+              <div className="tool-icon orange">▧</div>
+              <div>
+                <strong>Visual Engine</strong>
+                <span>Video-first asset search</span>
+              </div>
+              <span className="tool-state">Ready</span>
+            </div>
+          </section>
+
+          {loading && (
+            <section className="progress-card">
+              <div className="progress-top">
+                <div className="loader-ring" />
+                <div>
+                  <strong>{loadingText}</strong>
+                  <span>
+                    Creator AI is building the pieces of your Short.
+                  </span>
+                </div>
+              </div>
+              <div className="progress-line">
+                <i />
+              </div>
+            </section>
+          )}
+
+          {error && (
+            <section className="error-card">
+              <strong>Something went wrong</strong>
+              <span>{error}</span>
+            </section>
+          )}
+
+          {(director || video) && (
+            <section className="workspace">
+              <div className="workspace-head">
+                <div>
+                  <span className="small-label">CREATOR WORKSPACE</span>
+                  <h2>Your Short</h2>
+                </div>
+
+                <button onClick={newProject}>New project</button>
+              </div>
+
+              <div className="workspace-grid">
+                {video && (
+                  <div className="video-panel">
+                    <div className="video-frame">
+                      <video src={video} controls playsInline />
+                    </div>
+
+                    <a
+                      className="download"
+                      href={video}
+                      download
+                    >
+                      Download Short ↗
+                    </a>
+                  </div>
+                )}
+
+                {director && (
+                  <div className="director-panel">
+                    <div className="director-title">
+                      <span className="director-spark">✦</span>
+                      <div>
+                        <strong>AI Director</strong>
+                        <span>Creative blueprint</span>
+                      </div>
+                    </div>
+
+                    <div className="director-content">
+                      <DirectorData data={director} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+        </main>
+      )}
+
+      {page === "projects" && (
+        <main className="simple-page">
+          <div className="page-heading">
+            <span className="hero-pill">PROJECTS</span>
+            <h1>Your creations.</h1>
+            <p>Your recent Creator AI projects will appear here.</p>
+          </div>
+
+          <div className="project-grid">
+            {projects.map((project) => (
+              <button className="project" key={project.title}>
+                <div className="project-image">
+                  <span>✦</span>
+                </div>
+                <div className="project-info">
+                  <strong>{project.title}</strong>
+                  <span>{project.meta}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </main>
+      )}
+
+      {page === "settings" && (
+        <main className="simple-page">
+          <div className="page-heading">
+            <span className="hero-pill">SETTINGS</span>
+            <h1>Your studio.</h1>
+            <p>Creator AI preferences.</p>
+          </div>
+
+          <div className="settings">
+            <div>
+              <strong>Default language</strong>
+              <span>Used when creating a new Short.</span>
+            </div>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              <option>English</option>
+              <option>Hindi</option>
+              <option>Bangla</option>
+              <option>Banglish</option>
+            </select>
+          </div>
+
+          <div className="settings">
+            <div>
+              <strong>Default style</strong>
+              <span>Your preferred visual direction.</span>
+            </div>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+            >
+              <option>Cinematic</option>
+              <option>Documentary</option>
+              <option>Story</option>
+              <option>Facts</option>
+              <option>Horror</option>
+            </select>
+          </div>
+        </main>
+      )}
+
+      <div className="mobile-nav">
+        <button
+          className={page === "create" ? "active" : ""}
+          onClick={() => setPage("create")}
+        >
+          <span>✦</span>
+          Create
+        </button>
+
+        <button
+          className={page === "projects" ? "active" : ""}
+          onClick={() => setPage("projects")}
+        >
+          <span>▦</span>
+          Projects
+        </button>
+
+        <button
+          className={page === "settings" ? "active" : ""}
+          onClick={() => setPage("settings")}
+        >
+          <span>⚙</span>
+          Settings
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DirectorData({ data }) {
+  const title =
+    data.title ||
+    data.videoTitle ||
+    data.name ||
+    "Untitled Short";
+
+  const hook =
+    data.hook ||
+    data.opening ||
+    data.intro ||
+    "Your hook will appear here.";
+
+  const voiceover =
+    data.voiceover ||
+    data.script ||
+    data.narration ||
+    "";
+
+  const scenes =
+    data.scenes ||
+    data.visuals ||
+    data.shots ||
+    [];
+
+  return (
+    <>
+      <div className="director-section">
+        <span>Title</span>
+        <h3>{title}</h3>
+      </div>
+
+      <div className="director-section highlight">
+        <span>HOOK</span>
+        <p>{hook}</p>
+      </div>
+
+      {voiceover && (
+        <div className="director-section">
+          <span>VOICEOVER</span>
+          <p>{voiceover}</p>
+        </div>
+      )}
+
+      {Array.isArray(scenes) && scenes.length > 0 && (
+        <div className="director-section">
+          <span>VISUAL PLAN</span>
+
+          <div className="scene-list">
+            {scenes.map((scene, index) => (
+              <div className="scene" key={index}>
+                <b>{String(index + 1).padStart(2, "0")}</b>
+                <p>
+                  {typeof scene === "string"
+                    ? scene
+                    : scene.description ||
+                      scene.visual ||
+                      scene.prompt ||
+                      JSON.stringify(scene)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
